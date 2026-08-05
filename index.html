@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>حالة أقسام المتحف 🏛️</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #0f172a; color: #fff; padding: 25px; text-align: center; }
+        
+        .header-container { margin-bottom: 30px; }
+        h1 { color: #38bdf8; margin-bottom: 10px; font-size: 2em; }
+        .subtitle { color: #94a3b8; margin-bottom: 20px; font-size: 1.1em; }
+
+        .roblox-btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            gap: 10px; background: linear-gradient(135deg, #00a2ff, #0066ff);
+            color: #ffffff; font-size: 1.2em; font-weight: bold; padding: 14px 28px;
+            border-radius: 50px; text-decoration: none;
+            box-shadow: 0 4px 15px rgba(0, 162, 255, 0.4);
+            transition: all 0.3s ease; margin-bottom: 20px;
+        }
+        .roblox-btn:hover {
+            transform: translateY(-3px) scale(1.03);
+            box-shadow: 0 6px 20px rgba(0, 162, 255, 0.6);
+        }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; max-width: 1100px; margin: 0 auto; }
+        .card { background: #1e293b; border: 2px solid #334155; border-radius: 14px; padding: 20px; text-align: right; }
+        .card h3 { color: #f59e0b; margin-top: 0; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+        
+        .floor-box { background: #0f172a; padding: 12px; border-radius: 8px; margin-top: 10px; border: 1px solid #334155; }
+        .floor-name { color: #38bdf8; font-weight: bold; margin-bottom: 6px; }
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-weight: bold; font-size: 0.85em; background: #1e293b; margin-top: 3px; }
+    </style>
+</head>
+<body>
+
+    <div class="header-container">
+        <h1>🏛️ حالة أقسام المتحف والأدوار المتاحة</h1>
+        <p class="subtitle">تحديث مباشر ونظام متابعة الكثافة</p>
+        
+        <a href="https://www.roblox.com/games/14404471538/Al-Haram-Museum" target="_blank" class="roblox-btn">
+            🎮 دخول متحف الحرم المكي في روبلوكس 🚀
+        </a>
+    </div>
+
+    <div class="grid" id="visitor-grid"></div>
+
+    <script>
+        const FIREBASE_BASE = "https://roblox-museum-default-rtdb.firebaseio.com/";
+
+        let lastStructureJSON = "";
+
+        async function fetchVisitorData() {
+            try {
+                // 1. جلب هيكل الأقسام الحركي
+                const structRes = await fetch(`${FIREBASE_BASE}museum_structure.json?t=` + new Date().getTime());
+                const museumStructure = await structRes.json();
+
+                if (museumStructure && Array.isArray(museumStructure)) {
+                    const currentStructJSON = JSON.stringify(museumStructure);
+                    
+                    // إعادة رسم الشاشة فقط إذا حدث تغيير في الأقسام
+                    if (currentStructJSON !== lastStructureJSON) {
+                        lastStructureJSON = currentStructJSON;
+                        renderVisitorCards(museumStructure);
+                    }
+
+                    // 2. جلب حالة الإغلاق والكثافة
+                    const ctrlRes = await fetch(`${FIREBASE_BASE}zones_control.json?t=` + new Date().getTime());
+                    const ctrlData = await ctrlRes.json();
+
+                    const denRes = await fetch(`${FIREBASE_BASE}museum_zones_density.json?t=` + new Date().getTime());
+                    const denData = await denRes.json();
+
+                    museumStructure.forEach(zone => {
+                        zone.floors.forEach(floor => {
+                            const key = `${zone.name}_${floor}`;
+                            const ctrlEl = document.getElementById(`ctrl-${key}`);
+                            const denEl = document.getElementById(`den-${key}`);
+
+                            if (ctrlEl) {
+                                if (ctrlData && ctrlData[key]) {
+                                    ctrlEl.innerText = ctrlData[key];
+                                    if (ctrlData[key].includes("إغلاق")) {
+                                        ctrlEl.style.background = "#ef4444";
+                                        ctrlEl.style.color = "#fff";
+                                    } else if (ctrlData[key].includes("صيانة")) {
+                                        ctrlEl.style.background = "#f59e0b";
+                                        ctrlEl.style.color = "#fff";
+                                    } else {
+                                        ctrlEl.style.background = "#10b981";
+                                        ctrlEl.style.color = "#fff";
+                                    }
+                                } else {
+                                    ctrlEl.innerText = "مفتوح 🟢";
+                                    ctrlEl.style.background = "#10b981";
+                                    ctrlEl.style.color = "#fff";
+                                }
+                            }
+
+                            if (denEl) {
+                                if (denData && denData[key]) {
+                                    denEl.innerText = denData[key].status || "خالي ⚪";
+                                } else {
+                                    denEl.innerText = "خالي ⚪";
+                                }
+                            }
+                        });
+                    });
+                }
+            } catch (e) {
+                console.error("خطأ التحديث:", e);
+            }
+        }
+
+        function renderVisitorCards(structure) {
+            const container = document.getElementById("visitor-grid");
+            container.innerHTML = "";
+
+            structure.forEach(zone => {
+                let floorsHTML = "";
+                zone.floors.forEach(floor => {
+                    const key = `${zone.name}_${floor}`;
+                    floorsHTML += `
+                        <div class="floor-box">
+                            <div class="floor-name">🔹 ${floor}</div>
+                            <div><strong>الحالة:</strong> <span id="ctrl-${key}" class="badge">جاري التحقق...</span></div>
+                            <div><strong>الكثافة:</strong> <span id="den-${key}" class="badge">جاري التحقق...</span></div>
+                        </div>
+                    `;
+                });
+
+                container.innerHTML += `
+                    <div class="card">
+                        <h3>📍 ${zone.name}</h3>
+                        ${floorsHTML}
+                    </div>
+                `;
+            });
+        }
+
+        setInterval(fetchVisitorData, 2000);
+        fetchVisitorData();
+    </script>
+</body>
+</html>
