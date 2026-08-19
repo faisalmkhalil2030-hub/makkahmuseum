@@ -3,6 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- وسوم إجبار المتصفح على عدم حفظ النسخ القديمة (حل مشكلة عدم ظهور التحديث إلا بعد الريفرش) -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
     <title>حالة أقسام المتحف 🏛️</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -92,18 +98,18 @@
                     const ctrlRes = await fetch(`${FIREBASE_BASE}zones_control.json?t=` + new Date().getTime());
                     const ctrlData = await ctrlRes.json();
 
-                    // 3. جلب حالة الكثافة العامة للمتحف
-                    const denRes = await fetch(`${FIREBASE_BASE}museum_zones_density.json?t=` + new Date().getTime());
+                    // 3. جلب حالة الكثافة العامة للمتحف (تم تصحيح اسم المسار)
+                    const denRes = await fetch(`${FIREBASE_BASE}museum_general_density/overall.json?t=` + new Date().getTime());
                     const denData = await denRes.json();
 
                     // تحديث الخانة العلوية للكثافة العامة
                     const overallDensityEl = document.getElementById("museum-overall-density");
                     if (overallDensityEl) {
-                        if (denData && denData.overall) {
-                            overallDensityEl.innerText = denData.overall.status || "خالي ⚪";
-                            overallDensityEl.style.color = denData.overall.color || "#38bdf8";
+                        if (denData && denData.status) {
+                            overallDensityEl.innerText = denData.status;
+                            overallDensityEl.style.color = denData.color || "#38bdf8";
                         } else {
-                            overallDensityEl.innerText = "خالي ⚪";
+                            overallDensityEl.innerText = "خالٍ ⚪";
                             overallDensityEl.style.color = "#10b981";
                         }
                     }
