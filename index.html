@@ -8,7 +8,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #0f172a; color: #fff; padding: 25px; text-align: center; }
         
-        .header-container { margin-bottom: 30px; }
+        .header-container { margin-bottom: 25px; }
         h1 { color: #38bdf8; margin-bottom: 10px; font-size: 2em; }
         .subtitle { color: #94a3b8; margin-bottom: 20px; font-size: 1.1em; }
 
@@ -25,24 +25,46 @@
             box-shadow: 0 6px 20px rgba(0, 162, 255, 0.6);
         }
 
+        /* بطاقة الكثافة العامة للمتحف */
+        .overall-density-card {
+            background: #1e293b;
+            border: 2px solid #38bdf8;
+            border-radius: 14px;
+            padding: 15px 25px;
+            max-width: 1100px;
+            margin: 0 auto 25px auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 12px rgba(56, 189, 248, 0.15);
+        }
+        .overall-density-title { font-size: 1.2em; font-weight: bold; color: #f8fafc; }
+        .overall-density-badge { padding: 6px 16px; border-radius: 8px; font-weight: bold; font-size: 1em; background: #0f172a; border: 1px solid #334155; }
+
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; max-width: 1100px; margin: 0 auto; }
         .card { background: #1e293b; border: 2px solid #334155; border-radius: 14px; padding: 20px; text-align: right; }
         .card h3 { color: #f59e0b; margin-top: 0; border-bottom: 1px solid #334155; padding-bottom: 10px; }
         
-        .floor-box { background: #0f172a; padding: 12px; border-radius: 8px; margin-top: 10px; border: 1px solid #334155; }
-        .floor-name { color: #38bdf8; font-weight: bold; margin-bottom: 6px; }
-        .badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-weight: bold; font-size: 0.85em; background: #1e293b; margin-top: 3px; }
+        .floor-box { background: #0f172a; padding: 12px; border-radius: 8px; margin-top: 10px; border: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
+        .floor-name { color: #38bdf8; font-weight: bold; }
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-weight: bold; font-size: 0.85em; background: #1e293b; }
     </style>
 </head>
 <body>
 
     <div class="header-container">
         <h1>🏛️ حالة أقسام المتحف والأدوار المتاحة</h1>
-        <p class="subtitle">تحديث مباشر ونظام متابعة الكثافة</p>
+        <p class="subtitle">تحديث مباشر ونظام المتابعة</p>
         
         <a href="https://www.roblox.com/games/14404471538/Al-Haram-Museum" target="_blank" class="roblox-btn">
-            🎮 دخول متحف الحرم المكي في روبلوكس 🚀
+            🎮 دخول متحف الحرم المكي في روبلوكس 
         </a>
+    </div>
+
+    <!-- الخانة المستقلة للكثافة العامة للمتحف -->
+    <div class="overall-density-card">
+        <span class="overall-density-title">📊 حالة الكثافة العامة للمتحف:</span>
+        <span id="museum-overall-density" class="overall-density-badge">جاري التحقق...</span>
     </div>
 
     <div class="grid" id="visitor-grid"></div>
@@ -54,36 +76,48 @@
 
         async function fetchVisitorData() {
             try {
-                // 1. جلب هيكل الأقسام الحركي
+                // 1. جلب هيكل الأقسام
                 const structRes = await fetch(`${FIREBASE_BASE}museum_structure.json?t=` + new Date().getTime());
                 const museumStructure = await structRes.json();
 
                 if (museumStructure && Array.isArray(museumStructure)) {
                     const currentStructJSON = JSON.stringify(museumStructure);
                     
-                    // إعادة رسم الشاشة فقط إذا حدث تغيير في الأقسام
                     if (currentStructJSON !== lastStructureJSON) {
                         lastStructureJSON = currentStructJSON;
                         renderVisitorCards(museumStructure);
                     }
 
-                    // 2. جلب حالة الإغلاق والكثافة
+                    // 2. جلب حالة الإغلاق والأقسام
                     const ctrlRes = await fetch(`${FIREBASE_BASE}zones_control.json?t=` + new Date().getTime());
                     const ctrlData = await ctrlRes.json();
 
+                    // 3. جلب حالة الكثافة العامة للمتحف
                     const denRes = await fetch(`${FIREBASE_BASE}museum_zones_density.json?t=` + new Date().getTime());
                     const denData = await denRes.json();
 
+                    // تحديث الخانة العلوية للكثافة العامة
+                    const overallDensityEl = document.getElementById("museum-overall-density");
+                    if (overallDensityEl) {
+                        if (denData && denData.overall) {
+                            overallDensityEl.innerText = denData.overall.status || "خالي ⚪";
+                            overallDensityEl.style.color = denData.overall.color || "#38bdf8";
+                        } else {
+                            overallDensityEl.innerText = "خالي ⚪";
+                            overallDensityEl.style.color = "#10b981";
+                        }
+                    }
+
+                    // تحديث حالة الفتح والإغلاق لكل دور
                     museumStructure.forEach(zone => {
                         zone.floors.forEach(floor => {
                             const key = `${zone.name}_${floor}`;
                             const ctrlEl = document.getElementById(`ctrl-${key}`);
-                            const denEl = document.getElementById(`den-${key}`);
 
                             if (ctrlEl) {
                                 if (ctrlData && ctrlData[key]) {
                                     ctrlEl.innerText = ctrlData[key];
-                                    if (ctrlData[key].includes("إغلاق")) {
+                                    if (ctrlData[key].includes("إغلاق") || ctrlData[key].includes("مغلق")) {
                                         ctrlEl.style.background = "#ef4444";
                                         ctrlEl.style.color = "#fff";
                                     } else if (ctrlData[key].includes("صيانة")) {
@@ -97,14 +131,6 @@
                                     ctrlEl.innerText = "مفتوح 🟢";
                                     ctrlEl.style.background = "#10b981";
                                     ctrlEl.style.color = "#fff";
-                                }
-                            }
-
-                            if (denEl) {
-                                if (denData && denData[key]) {
-                                    denEl.innerText = denData[key].status || "خالي ⚪";
-                                } else {
-                                    denEl.innerText = "خالي ⚪";
                                 }
                             }
                         });
@@ -127,7 +153,6 @@
                         <div class="floor-box">
                             <div class="floor-name">🔹 ${floor}</div>
                             <div><strong>الحالة:</strong> <span id="ctrl-${key}" class="badge">جاري التحقق...</span></div>
-                            <div><strong>الكثافة:</strong> <span id="den-${key}" class="badge">جاري التحقق...</span></div>
                         </div>
                     `;
                 });
